@@ -1,0 +1,41 @@
+-- Top 10 customers by spending
+SELECT CustomerID, SUM(TotalPrice) AS total_spent
+FROM ecommerce_sale_table
+GROUP BY CustomerID
+ORDER BY total_spent DESC
+LIMIT 10;
+
+-- Customers with the most purchases
+SELECT CustomerID, COUNT(*) AS order_count
+FROM ecommerce_sale_table
+GROUP BY CustomerID
+ORDER BY order_count DESC
+LIMIT 10;
+
+-- Sales by month
+SELECT Year, Month, SUM(TotalPrice) AS monthly_sales
+FROM ecommerce_sale_table
+GROUP BY Year, Month
+ORDER BY Year, Month;
+
+-- Sales by day of week
+SELECT DayOfWeek, SUM(TotalPrice) AS sales_by_day
+FROM ecommerce_sale_table
+GROUP BY DayOfWeek
+ORDER BY sales_by_day DESC;
+
+-- Yearly sales
+SELECT Year, SUM(TotalPrice) AS yearly_sales
+FROM ecommerce_sale_table
+GROUP BY Year
+ORDER BY Year;
+
+-- Total number of returns
+SELECT COUNT(*) AS total_returns
+FROM ecommerce_sale_table
+WHERE is_return = 1;
+
+-- Revenue loss from returns
+SELECT SUM(TotalPrice) AS revenue_loss
+FROM ecommerce_sale_table
+WHERE is_return = 1;

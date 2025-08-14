@@ -1,0 +1,18 @@
+CREATE DATABASE IF NOT EXISTS ecommerce_analysis;
+USE ecommerce_analysis;
+
+CREATE TABLE ecommerce_sale_table (
+    InvoiceNo VARCHAR(20),
+    StockCode VARCHAR(20),
+    Description VARCHAR(255),
+    Quantity INT,
+    InvoiceDate DATETIME,
+    UnitPrice DECIMAL(10,2),
+    CustomerID INT,
+    Country VARCHAR(100),
+    is_return TINYINT,          
+    TotalPrice DECIMAL(10,2),
+    DayOfWeek VARCHAR(20),
+    Year INT,
+    Month INT
+);
