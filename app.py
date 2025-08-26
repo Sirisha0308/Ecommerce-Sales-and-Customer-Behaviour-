@@ -1,60 +1,128 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 import zipfile
+import os
 
-# Load dataset
+# ---------------------------
+# Load data function
+# ---------------------------
 @st.cache_data
 def load_data():
-    with zipfile.ZipFile("cleaned_data_updated.zip", "r") as z:
-        with z.open("cleaned_data_updated.csv") as f:
-            df = pd.read_csv(f)
+    zip_path = "cleaned_data_updated.zip"   # Zip file in GitHub
+    csv_name = "cleaned_data_updated.csv"   # CSV inside the zip
+
+    if not os.path.exists(csv_name):  # Extract only if not already
+        with zipfile.ZipFile(zip_path, 'r') as z:
+            z.extract(csv_name)
+
+    df = pd.read_csv(csv_name, encoding="latin1")
+    df["InvoiceDate"] = pd.to_datetime(df["InvoiceDate"])
     return df
 
+# Load dataset
 df = load_data()
+
+# ---------------------------
+# Sidebar Tabs
+# ---------------------------
+st.sidebar.title("📂 Dashboard Sections")
+tab = st.sidebar.radio(
+    "Select Analysis",
+    [
+        "Dataset Preview",
+        "Sales by Country",
+        "Top Customers",
+        "Sales Over Time",
+        "Top Products",
+        "Sales by Day of Week",
+        "Sales by Month",
+        "Yearly Sales Trend",
+        "Returns Analysis",
+        "Revenue Distribution"
+    ]
+)
 
 st.title("📊 E-commerce Sales & Customer Behavior Dashboard")
 
-# Show dataset
-if st.checkbox("Show raw data"):
-    st.write(df.head())
-    st.write("Columns:", df.columns.tolist())
+# ---------------------------
+# Tab Content
+# ---------------------------
+if tab == "Dataset Preview":
+    st.subheader("Dataset Preview")
+    st.dataframe(df.head())
 
-# --- Sales by Country ---
-st.subheader("🌍 Sales by Country")
-if "Country" in df.columns and "TotalPrice" in df.columns:
-    sales_by_country = df.groupby("Country")["TotalPrice"].sum().reset_index()
-    fig, ax = plt.subplots(figsize=(10, 5))
-    sns.barplot(data=sales_by_country.sort_values("TotalPrice", ascending=False).head(10),
-                x="TotalPrice", y="Country", ax=ax)
-    ax.set_title("Top 10 Countries by Sales")
+elif tab == "Sales by Country":
+    st.subheader("🌍 Sales by Country (Top 10)")
+    country_sales = df.groupby("Country")["TotalPrice"].sum().sort_values(ascending=False).head(10)
+    fig, ax = plt.subplots()
+    country_sales.plot(kind="bar", ax=ax)
+    ax.set_ylabel("Total Sales")
     st.pyplot(fig)
-else:
-    st.warning("Columns Country and TotalPrice not found in dataset.")
 
-# --- Top 10 Customers by Sales ---
-st.subheader("👥 Top 10 Customers by Sales")
-if "CustomerID" in df.columns and "TotalPrice" in df.columns:
-    top_customers = df.groupby("CustomerID")["TotalPrice"].sum().reset_index().sort_values(by="TotalPrice", ascending=False).head(10)
-    fig, ax = plt.subplots(figsize=(10, 5))
-    sns.barplot(data=top_customers, x="TotalPrice", y="CustomerID", ax=ax)
-    ax.set_title("Top 10 Customers by Sales")
+elif tab == "Top Customers":
+    st.subheader("👥 Top 10 Customers by Sales")
+    customer_sales = df.groupby("CustomerID")["TotalPrice"].sum().sort_values(ascending=False).head(10)
+    fig, ax = plt.subplots()
+    customer_sales.plot(kind="bar", ax=ax)
+    ax.set_ylabel("Total Sales")
     st.pyplot(fig)
-else:
-    st.warning("Columns CustomerID and TotalPrice not found in dataset.")
 
-# --- Sales Over Time ---
-st.subheader("⏰ Sales Over Time")
-if "InvoiceDate" in df.columns and "TotalPrice" in df.columns:
-    df["InvoiceDate"] = pd.to_datetime(df["InvoiceDate"], errors="coerce")
-    sales_time = df.groupby(df["InvoiceDate"].dt.to_period("M"))["TotalPrice"].sum().reset_index()
-    sales_time["InvoiceDate"] = sales_time["InvoiceDate"].astype(str)
-
-    fig, ax = plt.subplots(figsize=(12, 6))
-    sns.lineplot(data=sales_time, x="InvoiceDate", y="TotalPrice", marker="o", ax=ax)
-    ax.set_title("Monthly Sales Over Time")
-    plt.xticks(rotation=45)
+elif tab == "Sales Over Time":
+    st.subheader("⏳ Sales Over Time")
+    sales_over_time = df.groupby(df["InvoiceDate"].dt.date)["TotalPrice"].sum()
+    fig, ax = plt.subplots()
+    sales_over_time.plot(ax=ax)
+    ax.set_ylabel("Total Sales")
     st.pyplot(fig)
-else:
-    st.warning("Columns InvoiceDate and TotalPrice not found in dataset.")
+
+elif tab == "Top Products":
+    st.subheader("📦 Top 10 Products by Sales")
+    product_sales = df.groupby("Description")["TotalPrice"].sum().sort_values(ascending=False).head(10)
+    fig, ax = plt.subplots()
+    product_sales.plot(kind="bar", ax=ax)
+    ax.set_ylabel("Total Sales")
+    st.pyplot(fig)
+
+elif tab == "Sales by Day of Week":
+    st.subheader("📅 Sales by Day of Week")
+    day_sales = df.groupby("DayOfWeek")["TotalPrice"].sum()
+    fig, ax = plt.subplots()
+    day_sales.plot(kind="bar", ax=ax)
+    ax.set_ylabel("Total Sales")
+    st.pyplot(fig)
+
+elif tab == "Sales by Month":
+    st.subheader("🗓️ Sales by Month")
+    month_sales = df.groupby("Month")["TotalPrice"].sum()
+    fig, ax = plt.subplots()
+    month_sales.plot(kind="bar", ax=ax)
+    ax.set_ylabel("Total Sales")
+    st.pyplot(fig)
+
+elif tab == "Yearly Sales Trend":
+    st.subheader("📊 Yearly Sales Trend")
+    year_sales = df.groupby("Year")["TotalPrice"].sum()
+    fig, ax = plt.subplots()
+    year_sales.plot(kind="bar", ax=ax)
+    ax.set_ylabel("Total Sales")
+    st.pyplot(fig)
+
+elif tab == "Returns Analysis":
+    st.subheader("🔄 Returns Analysis")
+    return_sales = df.groupby("is_return")["TotalPrice"].sum()
+    fig, ax = plt.subplots()
+    return_sales.plot(kind="bar", ax=ax)
+    ax.set_ylabel("Total Sales")
+    st.pyplot(fig)
+
+elif tab == "Revenue Distribution":
+    st.subheader("💰 Revenue Distribution")
+    fig, ax = plt.subplots()
+    df["TotalPrice"].plot(kind="hist", bins=50, ax=ax)
+    ax.set_xlabel("TotalPrice")
+    st.pyplot(fig)
+
+# Footer
+st.markdown("---")
+st.markdown("Developed by Sirisha")
