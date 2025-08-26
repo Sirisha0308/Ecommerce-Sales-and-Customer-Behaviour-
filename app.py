@@ -17,7 +17,7 @@ st.set_page_config(
 # -------------------------------
 @st.cache_data
 def load_data():
-    zip_path = "cleaned_dataset_updated.zip"   # ensure this is in GitHub repo
+    zip_path = "cleaned_data_updated.zip"   # ensure this is in GitHub repo
 
     with zipfile.ZipFile(zip_path, 'r') as z:
         file_name = z.namelist()[0]  # first file inside zip
