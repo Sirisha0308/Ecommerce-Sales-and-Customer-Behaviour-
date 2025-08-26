@@ -7,8 +7,8 @@ import zipfile
 # Load dataset
 @st.cache_data
 def load_data():
-    with zipfile.ZipFile("cleaned_dataset_updated.zip", "r") as z:
-        with z.open("cleaned_dataset_updated.csv") as f:
+    with zipfile.ZipFile("cleaned_data_updated.zip", "r") as z:
+        with z.open("cleaned_data_updated.csv") as f:
             df = pd.read_csv(f)
     return df
 
