@@ -3,119 +3,128 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-st.set_page_config(page_title="E-commerce Sales & Customer Behaviour Analysis", layout="wide")
+# -------------------------------
+# Page configuration
+# -------------------------------
+st.set_page_config(
+    page_title="E-commerce Sales & Customer Behaviour Analysis",
+    layout="wide"
+)
 
-# ------------------------------
+st.title("📊 E-commerce Sales & Customer Behaviour Analysis")
+
+# -------------------------------
 # Load dataset
-# ------------------------------
+# -------------------------------
 @st.cache_data
 def load_data():
-    df = pd.read_csv("cleaned_data_updated.csv", encoding="ISO-8859-1", low_memory=False)
+    df = pd.read_csv(
+        "cleaned_dataset_updated.zip",
+        compression="zip",
+        encoding="ISO-8859-1",
+        low_memory=False
+    )
     return df
 
 df = load_data()
 
-# ------------------------------
+# -------------------------------
 # Data Cleaning
-# ------------------------------
+# -------------------------------
 df["is_return"] = df["Quantity"] < 0
 df = df[df["UnitPrice"] > 0]
 df = df.dropna(subset=["Description", "CustomerID"])
 df["CustomerID"] = df["CustomerID"].astype(int)
 df["InvoiceDate"] = pd.to_datetime(df["InvoiceDate"])
 
-# ✅ Create TotalSales for all sections
+# Add Total Sales column
 df["TotalSales"] = df["Quantity"] * df["UnitPrice"]
 
-# ------------------------------
-# Sidebar Navigation
-# ------------------------------
-st.sidebar.title("Navigation")
-section = st.sidebar.radio(
-    "Go to", 
-    ["Dataset Overview", "Missing Values", "Top Products", "Top Countries", "Monthly Trends", "Customer Analysis", "RFM Analysis"]
+st.success("✅ Data successfully loaded and cleaned!")
+
+# -------------------------------
+# Tabs for navigation
+# -------------------------------
+tab1, tab2, tab3, tab4 = st.tabs(
+    ["📈 Sales Overview", "🛍 Customer Behaviour", "🔄 Returns Analysis", "📦 Top Products"]
 )
 
-# ------------------------------
-# Sections
-# ------------------------------
-if section == "Dataset Overview":
-    st.title("📊 Dataset Overview")
-    st.write(df.head(20))
-    st.write("Shape:", df.shape)
-    st.write(df.describe())
-    st.write("Data Types:")
-    st.write(df.dtypes)
+# -------------------------------
+# Tab 1: Sales Overview
+# -------------------------------
+with tab1:
+    st.header("Sales Overview")
 
-elif section == "Missing Values":
-    st.title("🚫 Missing Values")
-    st.write(df.isnull().sum())
-
-elif section == "Top Products":
-    st.title("🏆 Top 10 Most Sold Products")
-    top_products = df["Description"].value_counts().head(10)
+    # Sales over time
+    sales_time = df.groupby(df["InvoiceDate"].dt.to_period("M"))["TotalSales"].sum()
     fig, ax = plt.subplots(figsize=(10, 5))
-    sns.barplot(x=top_products.values, y=top_products.index, ax=ax, palette="viridis")
+    sales_time.plot(kind="line", marker="o", ax=ax)
+    ax.set_title("Monthly Sales Over Time")
+    ax.set_ylabel("Total Sales")
+    ax.set_xlabel("Month")
     st.pyplot(fig)
 
-elif section == "Top Countries":
-    st.title("🌍 Top 10 Countries by Sales")
-    country_sales = df.groupby("Country")["Quantity"].sum().sort_values(ascending=False).head(10)
-    fig, ax = plt.subplots(figsize=(10, 5))
-    sns.barplot(x=country_sales.values, y=country_sales.index, ax=ax, palette="coolwarm")
+    # Country-wise sales
+    country_sales = df.groupby("Country")["TotalSales"].sum().sort_values(ascending=False).head(10)
+    fig, ax = plt.subplots(figsize=(8, 5))
+    sns.barplot(x=country_sales.values, y=country_sales.index, ax=ax)
+    ax.set_title("Top 10 Countries by Sales")
+    ax.set_xlabel("Sales")
+    ax.set_ylabel("Country")
     st.pyplot(fig)
 
-elif section == "Monthly Trends":
-    st.title("📈 Monthly Sales Trend")
-    monthly_sales = df.groupby(df["InvoiceDate"].dt.to_period("M"))["Quantity"].sum()
-    fig, ax = plt.subplots(figsize=(12, 5))
-    monthly_sales.plot(ax=ax, marker="o")
+# -------------------------------
+# Tab 2: Customer Behaviour
+# -------------------------------
+with tab2:
+    st.header("Customer Behaviour")
+
+    customer_sales = df.groupby("CustomerID")["TotalSales"].sum()
+    fig, ax = plt.subplots(figsize=(8, 5))
+    sns.histplot(customer_sales, bins=50, kde=True, ax=ax)
+    ax.set_title("Distribution of Customer Sales")
+    ax.set_xlabel("Total Sales per Customer")
     st.pyplot(fig)
 
-elif section == "Customer Analysis":
-    st.title("👥 Customer Analysis")
-    
-    # Top Customers by Sales
-    st.subheader("Top 10 Customers by Total Sales")
-    df["TotalSales"] = df["Quantity"] * df["UnitPrice"]
-    top_customers = df.groupby("CustomerID")["TotalSales"].sum().sort_values(ascending=False).head(10)
-    fig, ax = plt.subplots(figsize=(10, 5))
-    sns.barplot(x=top_customers.values, y=top_customers.index, ax=ax, palette="magma")
+    top_customers = customer_sales.sort_values(ascending=False).head(10)
+    fig, ax = plt.subplots(figsize=(8, 5))
+    sns.barplot(x=top_customers.values, y=top_customers.index, ax=ax)
+    ax.set_title("Top 10 Customers by Sales")
+    ax.set_xlabel("Sales")
+    ax.set_ylabel("CustomerID")
     st.pyplot(fig)
 
-elif section == "RFM Analysis":
-    st.title("📌 RFM (Recency, Frequency, Monetary) Analysis")
-    
-    import datetime as dt
-    snapshot_date = df["InvoiceDate"].max() + pd.Timedelta(days=1)
+# -------------------------------
+# Tab 3: Returns Analysis
+# -------------------------------
+with tab3:
+    st.header("Returns Analysis")
 
-    rfm = df.groupby("CustomerID").agg({
-        "InvoiceDate": lambda x: (snapshot_date - x.max()).days,
-        "InvoiceNo": "count",
-        "TotalSales": "sum"
-    })
-    rfm.rename(columns={
-        "InvoiceDate": "Recency",
-        "InvoiceNo": "Frequency",
-        "TotalSales": "Monetary"
-    }, inplace=True)
+    returns = df[df["is_return"] == True]
+    st.metric("Total Returns", len(returns))
 
-    st.write(rfm.describe())
-
-    # Recency Distribution
-    st.subheader("Recency Distribution")
-    fig, ax = plt.subplots()
-    sns.histplot(rfm["Recency"], bins=30, kde=True, ax=ax)
+    # Returns by country
+    returns_country = returns.groupby("Country")["is_return"].count().sort_values(ascending=False).head(10)
+    fig, ax = plt.subplots(figsize=(8, 5))
+    sns.barplot(x=returns_country.values, y=returns_country.index, ax=ax)
+    ax.set_title("Top Countries with Returns")
+    ax.set_xlabel("Number of Returns")
+    ax.set_ylabel("Country")
     st.pyplot(fig)
 
-    # Frequency Distribution
-    st.subheader("Frequency Distribution")
-    fig, ax = plt.subplots()
-    sns.histplot(rfm["Frequency"], bins=30, kde=True, ax=ax)
+# -------------------------------
+# Tab 4: Top Products
+# -------------------------------
+with tab4:
+    st.header("Top Products")
+
+    product_sales = df.groupby("Description")["TotalSales"].sum().sort_values(ascending=False).head(10)
+    fig, ax = plt.subplots(figsize=(8, 5))
+    sns.barplot(x=product_sales.values, y=product_sales.index, ax=ax)
+    ax.set_title("Top 10 Products by Sales")
+    ax.set_xlabel("Sales")
+    ax.set_ylabel("Product")
     st.pyplot(fig)
 
-    # Monetary Distribution
-    st.subheader("Monetary Distribution")
-    fig, ax = plt.subplots()
-    sns.histplot(rfm["Monetary"], bins=30, kde=True, ax=ax)
-    st.pyplot(fig)
+    st.dataframe(product_sales.reset_index().rename(columns={"Description": "Product", "TotalSales": "Sales"}))
+
